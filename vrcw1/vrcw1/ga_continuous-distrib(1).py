@@ -24,9 +24,9 @@ GENERATIONS = 100 # Change GENERATIONS to obtain better fitness.
 SOLUTION_FOUND = False
 
 CORSSOVER_RATE = 0.8 # Change CORSSOVER_RATE  to obtain better fitness.
-MUTATION_RATE = 0.2 # Change MUTATION_RATE to obtain better fitness.
+MUTATION_RATE = 0.2# Change MUTATION_RATE to obtain better fitness.
 
-GENE_LENGTH = 4
+GENE_LENGTH = 6
 
 # MINIMUM FUNCTIONS TO BE USED IN YOU COURSEWORK
 def generate_population(lower_bound, upper_bound):
@@ -35,12 +35,7 @@ def generate_population(lower_bound, upper_bound):
     population = []# Update this line if you need to
     population = np.round(random.uniform(lower_bound, upper_bound, size=(POPULATION_SIZE, GENE_LENGTH)))
     population = population.tolist()
-    print(str(population) + "\n")
-   # for i in range(0,POPULATION_SIZE):
-    #   population.append([])
-     #   for j in range(0,GENE_LENGTH):
-      #      population[i].append(rng.randint(lower_bound,upper_bound))
-       # print(str(population[i]) + "\n")
+  
     return population
 
 
@@ -56,54 +51,43 @@ def compute_fitness(individual):
 
 def selection(population):
     # need to decide on an operation more appropriete
-    individual = []  # Update this line if you need to
+    individual = [] 
     for i in (population):
         individual.append(compute_fitness(i));
-    print("fitness " + str(individual) + "\n")
     return individual
     
 
 def crossover(first_parent, second_parent):
     #implimenting single point crossover recombination
-    individual = [] 
-    if rng.random() < CORSSOVER_RATE:
+    individual = []
+    survive = np.random.random_sample()#rng.random() 
+    print (str(survive) + "\n")
+    if survive < CORSSOVER_RATE:
         pos = rng.randint(0,GENE_LENGTH-1)
         individual.append(first_parent[:pos] +  second_parent[pos:])
         individual.append(first_parent[pos:] +  second_parent[:pos])
-    return individual
+        return individual
+    else:
+        return None
+
 
 def mutation(individual):
     
-    #TODO : Write your own code to for choice  of your mutation operator - you can use if condition to write more tan one ime of crossover operator
     # single bit point mutation
     if rng.random() < MUTATION_RATE:
         posRng = rng.randint(0,np.size(individual) -1)
-        newMut = rng.randint(0,10)
+        newMut = rng.randint(-10,10)
         while newMut == individual[posRng]:
-            newMut = rng.randint(0,10)
-            #print(str (newMut) + " " + str(individual[posRng]))
+            newMut = rng.randint(-10,10)
         individual[posRng] = newMut
-       # print('worked \n' )
     return individual
 
-#TODO : You can increase number of function to be used to improve your GA code 
-
-
-
-def next_generation(previous_population):
-    #TODO : Write your own code to generate next 
-    
-    
-    print(' ') # Print appropriate generation information here. 
-    return next_generation
-    
 def findParents(fitness):
      parentIndex = []
      fitness2 = fitness.copy()
      fitness2.sort(reverse = True)
      for j in range (0, np.size(fitness2)):
         for i in range(0,np.size(fitness)):
-            # print("testing " +str(fitness[i]) + " "  + str(fitness2[j]) )
              if fitness[i] == fitness2[j]:
                  if i not in parentIndex:
                     parentIndex.append(i);
@@ -112,50 +96,63 @@ def findParents(fitness):
      return parentIndex
 
 
+def next_generation(previous_population):
+    fitness = selection(previous_population)
+    parents = findParents(fitness)
+
+    mutatedPopulation = []
+    for i in previous_population.copy():
+         mutatedPopulation.append(mutation(i))
+    
+    next_generation = []
+    parentPos = 0;
+    while parentPos < len(previous_population):
+        children = crossover(previous_population[parents[parentPos]],previous_population[parents[parentPos + 1]])
+        if children != None:
+            next_generation.append(children[0])
+            next_generation.append(children[1])
+        parentPos = parentPos + 2
+   
+    print (" next gen " + str(next_generation) + "\n")
+    return next_generation
+    
+
+
+
 # USE THIS MAIN FUNCTION TO COMPLETE YOUR CODE - MAKE SURE IT WILL RUN FROM COMOND LINE   
 def main(): 
     global POPULATION_SIZE 
     global GENERATIONS
     global SOLUTION_FOUND
     global GENE_LENGTH
+
+    currentGeneration = 0
+    currentHighestFitness = 0
+
+    #should find a way to change the parts which depends on this
     lower_bound = -10 
     upper_bound = 10
     
     population = generate_population(lower_bound, upper_bound)
+    print ("first gen " + str(population) + "\n")
    
     while (SOLUTION_FOUND == False):  # TODO: write your termination condition here or within the loop  
-        
-        #calculates the fitness of the population
         fitness = selection(population)
-
-        #selects the parents which are most likly to produces the best offspirng
-        #can be made into a fucntion for which is used by both parent 1 and 2
-        # need to be randomised
         parents = findParents(fitness)
-        print("parents " + str(parents) + "\n")
-        
-        #creates the offspring
-        offspring = []
-        print ("parent1 " + str(population[parents[0]]))
-        print ("parent2 " + str(population[parents[1]]))
-        offspring.append(crossover(population[parents[0]],population[parents[1]]))
-        print ("offSpring " + str(offspring))
-        
-        #mutates the population
-        mutatedPopulation = []
-        # works but for some reason still affects population even though it has been copied. doesnt ruin anything but is still weird 
-        for i in population.copy():
-            mutatedPopulation.append(mutation(i))
-       
-       
+        if fitness[parents[0]] > currentHighestFitness:
+                   currentHighestFitness = fitness[parents[0]]
+        avg = sum(fitness)/len(fitness)
+        print ("Generation {} | population size {} \n".format(currentGeneration, len(population)))
+        print ( "Highest Fitness of Generation {} | Highest Fitness overall {} | Generation averge fitness {} \n".format(fitness[parents[0]], currentHighestFitness, avg))
+        population  = next_generation(population);
 
-        #TODO: present innovative graphical illustration like plots and presentation of genetic algorithm results 
-        #This is free (as you like) innovative part of the assessment. 
-        break;
+        if currentGeneration < GENERATIONS and len(population) > 1:
+            currentGeneration = currentGeneration + 1
+        else:
+            break;
+        
  
 
 if __name__ == '__main__': 
     main() 
-    
-    
     
