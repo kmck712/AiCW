@@ -12,86 +12,218 @@ import random
 import math
 import numpy as np
 import matplotlib as plt
-
+from numpy import random 
 
 # MINIMUM GLOBAL VARIABLES TO BE USED
-POPULATION_SIZE = 50 # Change POPULATION_SIZE to obtain better fitness.
+POPULATION_SIZE = 10 # Change POPULATION_SIZE to obtain better fitness.
 
-GENERATIONS = 100 # Change GENERATIONS to obtain better fitness.
+GENERATIONS = 50 # Change GENERATIONS to obtain better fitness.
 SOLUTION_FOUND = False
 
 CORSSOVER_RATE = 0.8 # Change CORSSOVER_RATE  to obtain better fitness.
-MUTATION_RATE = 0.2 # Change MUTATION_RATE to obtain better fitness.
-
+MUTATION_RATE = 0.5 # Change MUTATION_RATE to obtain better fitness.
+GENE_LENGTH = 10
+VARSET = [0,1]
 
 # MINIMUM FUNCTIONS TO BE USED IN YOU COURSEWORK
-def generate_population(size):
+def generate_population(size, varSet):
     
-    population = []# Update this line if you need to
-    #TODO : Write your own code to generate population of POPULATION_SIZE individuals    
+    population = []
+    population = random.choice(VARSET,size=(POPULATION_SIZE, GENE_LENGTH))
+   
+    population = population.tolist() 
     
     return population
 
 
 def compute_fitness(individual):
-    #TODO : Write your own code to generate fitness function evaluation for your select functions
-    print('fitness computed')
-    fitness = np.nan()
+    
+    fitness = sum(individual)
+    print ("current fitness {}\n".format(fitness) )
+    return fitness
+
+def compute_fitnessKnap(individual, weights, values, threshold):
+    
+    fitness = []
+    sumW = 0
+    sumV = 0
+    for i in range(0, len(individual)):
+        sumW = sumW + individual[i] * weights[i]
+        sumV = sumV + individual[i] * values[i]
+    if (sumW > threshold):
+        fitness = 0 
+    else:
+        fitness = sumV
+   # print ("sum W {} fitness {} \n".format(sumW , fitness ))
     return fitness
 
 
-def selection(population):
+def selectionKnap(population,weights, values, threshold):
 
-    individual = []  # Update this line if you need to
-    #TODO : Write your own code to for choice  of your selection operator
+    individual = [] 
+    for i in population:
+        individual.append(compute_fitnessKnap(i, weights, values, threshold))
     
     return individual
     
 
-def crossover(first_parent, second_parent):
+def selection(population):
+
+    individual = [] 
+    for i in population:
+        individual.append(compute_fitness(i))
     
-    individual = [] # Update this line if you need to
-    #TODO : Write your own code to for choice  of your crossover operator - you can use if condition to write more tan one ime of crossover operator
+    return individual
+
+def crossover(first_parent, second_parent):
+   #implimenting single point crossover recombination
+    individual = []
+    crossProb = random.rand()
+    if crossProb < CORSSOVER_RATE:
+        pos = random.randint(0,GENE_LENGTH-1)
+        individual.append(first_parent[:pos] +  second_parent[pos:])
+        individual.append(first_parent[pos:] +  second_parent[:pos])
+        return individual
+    else:
+        individual.append(first_parent)
+        individual.append(second_parent)
+        return individual
     
     return individual
 
 def mutation(individual):
     
-    #TODO : Write your own code to for choice  of your mutation operator - you can use if condition to write more tan one ime of crossover operator
+     #need to glabalise the mutation bounds 
+    # single bit point mutation
+    if random.rand() < MUTATION_RATE:
+        posRng = random.randint(0,np.size(individual) -1)
+        newMut = random.choice(VARSET)
+        while newMut == individual[posRng]:
+            newMut = random.choice(VARSET)
+        individual[posRng] = newMut
     
-
     return individual
 
 #TODO : You can increase number of function to be used to improve your GA code 
 
+def findParents(fitness, order):
+    #selection with to find values with lowest zeros 
+    #creates a list with the indexs of the genes from greatest fitness to lowest fitness
+     parentsIndex = []
+     orderedVal = []     
+     orderedVal = fitness.copy()
+     orderedVal.sort(reverse = order)
+   #  print( "best fitness" + str(orderedVal[0]) + "\n")
+     for j in range (0, np.size(orderedVal)):
+        for i in range(0,np.size(fitness)):
+             if  fitness[i] == orderedVal[j]:
+                 if i not in parentsIndex:
+                    parentsIndex.append(i);
+                    break;
+     test = fitness.copy()
+     test.sort(reverse = True)
+     #print('current fittness {} \n'.format(test))
+    # print('parent index {} \n '.format(parentsIndex))
+     return parentsIndex
+    
+
+def knap():
+    currentBest = [];
+    currentBestFitness = 0 
+    curGen = 0;
+    item_number = np.arange(1,11)
+    weight = np.random.randint(1, 15, size = 10)
+    value = np.random.randint(10, 750, size = 10)
+    knapsack_threshold = 35    #Maximum weight that the bag of thief can hold 
+    print('The list is as follows:')
+    print('Item No.   Weight   Value')
+    for i in range(item_number.shape[0]):
+        print('{0}          {1}         {2}\n'.format(item_number[i], weight[i], value[i]))
+
+    population = generate_population(POPULATION_SIZE, VARSET)
+    
+    print("population  " + str(population))
+   # print('complete code for a combinitorial optimization problem:')
+    while (True):  
+        curGen = curGen + 1
+        fitness = selectionKnap(population, weight, value, knapsack_threshold)
+        parents = findParents(fitness, True)
+
+        if curGen > GENERATIONS:
+            print ("best fitness  {0} \n".format(currentBestFitness))
+            
+            print ("best values  {0} \n".format(currentBest))
+
+            for i in range (0,len(currentBest)):
+                print ("{}".format(currentBest[i] * (i +1)))
+            break;
+
+        if fitness[parents[0]] > currentBestFitness:
+            currentBestFitness = fitness[parents[0]]
+            currentBest = population[parents[0]]
+        next_generation = []
+        parentPos = 0;
+        while parentPos < len(population):
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
+            if children != None:
+                next_generation.append(children[0])
+                next_generation.append(children[1])
+            parentPos = parentPos + 2
+   
+        mutatedPopulation = []
+        for i in next_generation.copy():
+            mutatedPopulation.append(mutation(i))
+      
+        population = mutatedPopulation
+        print("Generation {0} | population  \n".format(curGen) + str(population))
 
 
+def minSum():
+    curGen = 0;
+    
+    population = generate_population(POPULATION_SIZE, VARSET)
+    print("population  " + str(population))
+   
+    while (True):  
+        curGen = curGen + 1
+        fitness = selection(population)
+        parents = findParents(fitness, False)
 
-def next_generation(previous_population):
-    #TODO : Write your own code to generate next 
-    
-    
-    print(' ') # Print appropriate generation information here. 
-    return next_generation
-    
+        if 0 in fitness:
+            print ("solution found  {} \n".format(population[fitness.index(0)]))
+            break;
+        if curGen > GENERATIONS:
+            print ("Soloution not found \n")
+            
+            print ("last Generation {}\n last fitness {}".format(population,fitness))
+            break;
+
+        next_generation = []
+        parentPos = 0;
+        while parentPos < len(population):
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
+            if children != None:
+                next_generation.append(children[0])
+                next_generation.append(children[1])
+            parentPos = parentPos + 2
+   
+        mutatedPopulation = []
+        for i in next_generation.copy():
+            mutatedPopulation.append(mutation(i))
+      
+        population = mutatedPopulation
+        print("Generation {0} | population  \n".format(curGen) + str(population))
+       
+        
 
 # USE THIS MAIN FUNCTION TO COMPLETE YOUR CODE - MAKE SURE IT WILL RUN FROM COMOND LINE   
 def main(): 
     global POPULATION_SIZE 
     global GENERATIONS
     global SOLUTION_FOUND
-    
-    population = generate_population(POPULATION_SIZE)
-    
-    
-    print('complete code for a combinitorial optimization problem:')
-    while (True):  # TODO: write your termination condition here or within the loop 
-        #TODO: write your generation propagation code here 
-
-
-        #TODO: present innovative graphical illustration like plots and presentation of genetic algorithm results 
-        #This is free (as you like) innovative part of the assessment.
-        break # Remove this line
+    global GENE_LENGTH
+    knap()
+    #minSum()
  
 
 if __name__ == '__main__': 

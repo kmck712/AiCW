@@ -26,7 +26,7 @@ SOLUTION_FOUND = False
 CORSSOVER_RATE = 0.8 # Change CORSSOVER_RATE  to obtain better fitness.
 MUTATION_RATE = 0.2# Change MUTATION_RATE to obtain better fitness.
 
-GENE_LENGTH = 6
+GENE_LENGTH = 4
 
 # MINIMUM FUNCTIONS TO BE USED IN YOU COURSEWORK
 def generate_population(lower_bound, upper_bound):
@@ -41,6 +41,7 @@ def generate_population(lower_bound, upper_bound):
 
 def compute_fitness(individual):
     # fitness function used - sum squares function
+    # using for a minimisation problem where the goal is to get 0
     n = GENE_LENGTH
     fitness = 0
     for j in range(0,n):
@@ -48,37 +49,62 @@ def compute_fitness(individual):
     
     return fitness
 
+def compute_fitnessDIXON(individual):
+    # fitness function used - sum squares function
+    n = GENE_LENGTH
+    fitness = 0
+    
+    for j in range(1,n):
+        fitness = fitness+j*(2*int(individual[j])^2-int(individual[j-1]))^2
+    fitness = fitness+(int(individual[1])-1)^2;
+   # print("gitness " + str(fitness))
+    return fitness
+
+def compute_fitnessDIXON(individual):
+    # fitness function used - sum squares function
+    n = GENE_LENGTH
+    fitness = 0
+    
+    for j in range(1,n):
+        fitness = fitness+j*(2*int(individual[j])^2-int(individual[j-1]))^2
+    fitness = fitness+(int(individual[1])-1)^2;
+   # print("gitness " + str(fitness))
+    return fitness
 
 def selection(population):
     # need to decide on an operation more appropriete
     individual = [] 
     for i in (population):
         individual.append(compute_fitness(i));
+     #   individual.append(compute_fitnessDIXON(i));
     return individual
     
 
 def crossover(first_parent, second_parent):
     #implimenting single point crossover recombination
     individual = []
-    survive = np.random.random_sample()#rng.random() 
-    print (str(survive) + "\n")
+    survive = rng.random() 
+    #print (str(survive) + "\n")
     if survive < CORSSOVER_RATE:
         pos = rng.randint(0,GENE_LENGTH-1)
         individual.append(first_parent[:pos] +  second_parent[pos:])
         individual.append(first_parent[pos:] +  second_parent[:pos])
         return individual
     else:
-        return None
+        individual.append(first_parent)
+        individual.append(second_parent)
+        return individual
+        
 
 
 def mutation(individual):
-    
+    #need to glabalise the mutation bounds 
     # single bit point mutation
     if rng.random() < MUTATION_RATE:
         posRng = rng.randint(0,np.size(individual) -1)
-        newMut = rng.randint(-10,10)
+        newMut = rng.randint(-10.0,10.0)
         while newMut == individual[posRng]:
-            newMut = rng.randint(-10,10)
+            newMut = rng.randint(-10.0,10.0)
         individual[posRng] = newMut
     return individual
 
@@ -86,6 +112,7 @@ def findParents(fitness):
      parentIndex = []
      fitness2 = fitness.copy()
      fitness2.sort(reverse = True)
+     print(str(fitness2))
      for j in range (0, np.size(fitness2)):
         for i in range(0,np.size(fitness)):
              if fitness[i] == fitness2[j]:
@@ -95,15 +122,60 @@ def findParents(fitness):
      
      return parentIndex
 
+def findParents2(fitness):
+    #selection with random 
+     parentValue= []
+     for i in range(0,np.size(fitness)):
+        # print ("fitness" + str (fitness[i]) + "\n")    
+         if fitness[i] < 0:
+             parentValue.append(50 + fitness[i])
+         else:
+             parentValue.append(50 - fitness[i])
+
+    # print ("values " + str (parentValue) + "\n") 
+     totalV = sum(parentValue)
+     parentsIndex = []
+     while (np.size(parentsIndex) != np.size(fitness)):
+         indx = rng.randint(0,totalV)
+        # print ("chosen random " + str(indx) + "\n") 
+         probSum = 0
+         for j in range(0,np.size(fitness)):
+             probSum =  probSum+ parentValue[j]
+             if probSum > indx:
+                 parentsIndex.append(j)
+                 break
+             #print ("current prob" + str(probSum) + "\n")
+     return parentsIndex
+
+def findParents3(fitness):
+    #selection with to find values with lowest zeros 
+     parentValue= []
+     for i in range(0,np.size(fitness)):
+        # print ("fitness" + str (fitness[i]) + "\n")    
+         if fitness[i] < 0:
+             parentValue.append(100 + fitness[i])
+         else:
+             parentValue.append(100 - fitness[i])
+
+     parentsIndex = []
+     orderedVal = parentValue.copy()
+     orderedVal.sort(reverse = True)
+     print(str(orderedVal))
+     for j in range (0, np.size(orderedVal)):
+        for i in range(0,np.size(fitness)):
+             if  parentValue[i] == orderedVal[j]:
+                 if i not in parentsIndex:
+                    parentsIndex.append(i);
+                    break;
+     
+     
+     return parentsIndex
+
 
 def next_generation(previous_population):
     fitness = selection(previous_population)
-    parents = findParents(fitness)
-
-    mutatedPopulation = []
-    for i in previous_population.copy():
-         mutatedPopulation.append(mutation(i))
-    
+    parents = findParents3(fitness)
+    print ("fitness " + str(fitness) + "\n")
     next_generation = []
     parentPos = 0;
     while parentPos < len(previous_population):
@@ -112,9 +184,12 @@ def next_generation(previous_population):
             next_generation.append(children[0])
             next_generation.append(children[1])
         parentPos = parentPos + 2
-   
-    print (" next gen " + str(next_generation) + "\n")
-    return next_generation
+    
+    mutatedPopulation = []
+    for i in next_generation.copy():
+         mutatedPopulation.append(mutation(i))
+    print (" next gen " + str(mutatedPopulation) + "\n")
+    return mutatedPopulation
     
 
 
@@ -130,7 +205,7 @@ def main():
     currentHighestFitness = 0
 
     #should find a way to change the parts which depends on this
-    lower_bound = -10 
+    lower_bound = -10
     upper_bound = 10
     
     population = generate_population(lower_bound, upper_bound)
@@ -138,14 +213,15 @@ def main():
    
     while (SOLUTION_FOUND == False):  # TODO: write your termination condition here or within the loop  
         fitness = selection(population)
-        parents = findParents(fitness)
-        if fitness[parents[0]] > currentHighestFitness:
-                   currentHighestFitness = fitness[parents[0]]
+        parents = findParents3(fitness)
+       # if fitness[parents[0]] > currentHighestFitness:
+        #           currentHighestFitness = fitness[parents[0]]
         avg = sum(fitness)/len(fitness)
         print ("Generation {} | population size {} \n".format(currentGeneration, len(population)))
-        print ( "Highest Fitness of Generation {} | Highest Fitness overall {} | Generation averge fitness {} \n".format(fitness[parents[0]], currentHighestFitness, avg))
+        print ( "Generation averge fitness {} \n".format(avg))
+       # print ( "Highest Fitness of Generation {} | Highest Fitness overall {} | Generation averge fitness {} \n".format(fitness[parents[0]], currentHighestFitness, avg))
         population  = next_generation(population);
-
+       
         if currentGeneration < GENERATIONS and len(population) > 1:
             currentGeneration = currentGeneration + 1
         else:
