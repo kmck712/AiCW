@@ -23,6 +23,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ga-combinatorial-distrib.task3.py" />
     <Compile Include="ga-combinatorial-distrib.py" />
     <Compile Include="ga_continuous-distrib_2ndTake.py" />
     <Compile Include="ga_continuous-distrib%281%29.py" />

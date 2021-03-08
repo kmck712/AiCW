@@ -35,21 +35,32 @@ def generate_population():
     
     return population
 
-def generate_populationTrav():
+def generate_populationBin(binThresh, weights):
  
+    genSet = VARSET.tolist()
     population = []
-    for i in range(0,POPULATION_SIZE):
-        nextPop = []
-        genSet = VARSET.tolist()
-        genSet.remove(0)
-        nextPop.append(0)
-        for j in range(2,GENE_LENGTH):
+    popSize = POPULATION_SIZE -1
+    print ("size {}".format(popSize))
+    while sum(genSet) != 0:
+        bWeight = 0
+        itemsToAdd = []
+       # print("genSet sum {}".format(sum(genSet)))
+        while sum(genSet) != 0:
             nextItem = random.choice(genSet)
-            nextPop.append(nextItem)
-            genSet.remove(nextItem)
-        nextPop.append(0)
-        population.append(nextPop)
-   
+            print("damage done {} current node {}".format((len(genSet) - len(itemsToAdd)), popSize))
+            if ((len(genSet) - len(itemsToAdd)) < popSize):
+                break;
+            elif (bWeight + weights[nextItem])> binThresh:
+                break
+            else:
+                itemsToAdd.append(nextItem)
+                genSet.remove(nextItem)
+                bWeight = bWeight + weights[nextItem]
+                
+        population.append(itemsToAdd)
+        popSize = popSize - 1
+    #population = population.tolist
+    print ("lets hope this works {}".format(population))
     return population
 
 def compute_fitness(individual):
@@ -312,34 +323,30 @@ def nQueue():
        
         
 
-def travel():
+def bins():
     global VARSET
     global POPULATION_SIZE
-    global GENE_LENGTH 
     currentBest = [];
     currentBestFitness = 0 
     curGen = 0;
-    numCities = 5
-
-
-    GENE_LENGTH = numCities + 1
-    item_number = np.arange(0, numCities)
-    VARSET = np.arange(0, numCities)
+    numItems = 10
+    item_number = np.arange(0,numItems)
+    VARSET = np.arange(0,numItems)
     POPULATION_SIZE = 10
 
     lowerBound = 1
     upperBound = 10
-    weight = np.random.randint(lowerBound, upperBound, size =( numCities,5))  
-    for i in range (0,numCities):
-            weight[i][i] = 0
-    
+    weight = np.random.randint(lowerBound, upperBound, size = numItems)
+
+    binThresh = 20  
+
     print('The list is as follows:')
     print('Item No.   Weight  ')
     for i in range(item_number.shape[0]):
         print('{0}          {1}        \n'.format(item_number[i], weight[i]))
 
 
-    population = generate_populationTrav()
+    population = generate_populationBin(binThresh, weight)
     
     print("population  " + str(population))
    # print('complete code for a combinitorial optimization problem:')
@@ -386,7 +393,7 @@ def main():
     #knap()
     #minSum() works hundo % 
     #nQueue()hundo % works
-    travel()
+    bins()
  
 
 if __name__ == '__main__': 
