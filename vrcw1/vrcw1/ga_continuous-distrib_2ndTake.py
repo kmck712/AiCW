@@ -17,6 +17,8 @@ from numpy import random
 
 
 
+
+
 # MINIMUM GLOBAL VARIABLES TO BE USED
 POPULATION_SIZE = 50 # Change POPULATION_SIZE to obtain better fitness.
 
@@ -28,15 +30,16 @@ MUTATION_RATE = 0.2# Change MUTATION_RATE to obtain better fitness.
 
 GENE_LENGTH = 4
 
-UPPER_BOUND = 4
-LOWER_BOUND = -4
+UPPER_BOUND = 10
+LOWER_BOUND = -10
 
 # MINIMUM FUNCTIONS TO BE USED IN YOU COURSEWORK
 def generate_population():
 
     population = []
-    population = random.uniform(LOWER_BOUND, UPPER_BOUND, size=(POPULATION_SIZE, GENE_LENGTH))
-    #np.round(
+    #population = random.uniform(LOWER_BOUND, UPPER_BOUND, size=(POPULATION_SIZE, GENE_LENGTH))
+    population = random.randint(LOWER_BOUND, UPPER_BOUND, size=(POPULATION_SIZE, GENE_LENGTH))
+    #population = np.round(population)
     population = population.tolist()
   
     return population
@@ -49,8 +52,8 @@ def compute_fitness(individual):
     fitness = 0
     for j in range(0,n):
      
-       fitness = fitness + (j+1)*int(individual[j])**2
-    
+       fitness = fitness + (j+1)*individual[j]**2
+    #print("right method\)
     return fitness
 
 def compute_fitnessDixon(individual):
@@ -107,16 +110,21 @@ def perm( x, b=.5 ):
     return sum([ sum( (j**k + b) * ((x / j) ** k - 1) ) **2
              for k in j ])
 
-def selection(population):
+def selection(population, method):
     # need to decide on an operation more appropriete
     individual = [] 
     for i in (population):
-       #individual.append(compute_fitness(i));
-       #individual.append(compute_fitnessDixon(i));
-       #individual.append(compute_fitnessLevy(i));
-       #individual.append(compute_fitnessZakharov(i));
-       #individual.append(compute_fitnessPerm(i));
-       individual.append(perm(i));
+       if method == 0:
+        individual.append(compute_fitness(i));
+       elif method == 1:
+        individual.append(compute_fitnessDixon(i));
+       elif method == 2:
+        individual.append(compute_fitnessLevy(i));
+       elif method == 3:
+        individual.append(compute_fitnessZakharov(i));
+       elif method == 4:
+        individual.append(compute_fitnessPerm(i));
+        #individual.append(perm(i));
     return individual
     
 
@@ -141,8 +149,7 @@ def mutation(individual):
     # single bit point mutation
     if rng.random() < MUTATION_RATE:
         posRng = rng.randint(0,np.size(individual) -1)
-        newMut = LOWER_BOUND + (UPPER_BOUND-LOWER_BOUND)*random.random()
-        #newMut = rng.random_sample(LOWER_BOUND, UPPER_BOUND)
+        newMut = random.randint(LOWER_BOUND, UPPER_BOUND)
         while newMut == individual[posRng]:
             newMut = rng.randint(LOWER_BOUND, UPPER_BOUND)
         individual[posRng] = newMut
@@ -185,57 +192,132 @@ def next_generation(previous_population):
          mutatedPopulation.append(mutation(i))
     #print (" next gen " + str(mutatedPopulation) + "\n")
     return mutatedPopulation
+
+
+def bounds(type):
+    global UPPER_BOUND
+    global LOWER_BOUND
+    if (type == 3):#Zakharov
+        UPPER_BOUND = 10
+        LOWER_BOUND = -5
+    if (type == 4): #perm
+        UPPER_BOUND = GENE_LENGTH
+        LOWER_BOUND = -GENE_LENGTH
+    else: #sum squares, levy, dixon and price
+        UPPER_BOUND = 10
+        LOWER_BOUND = -10
+   
+def settings():
+    global CORSSOVER_RATE
+    global MUTATION_RATE 
+    global GENE_LENGTH
+    global POPULATION_SIZE
+    global GENERATIONS
+    complete = False
+    while complete == False:
+        print("what Crossover Rate do you want? \n")
+        inp = input()
+        CORSSOVER_RATE = float(inp)
+
+        print("what Mutation Rate do you want? \n")
+        inp = input()
+        MUTATION_RATE = float(inp)
+
+        print("what Gene Length do you want? \n")
+        inp = input()
+        GENE_LENGTH = float(inp)
+
+        print("What Population Size do you want? \n")
+        inp = input()
+        POPULATION_SIZE = float(inp)
+
+        print("How many Generation do you want? \n")
+        inp = input()
+        GENERATIONS = float(inp)
+        complete = True
+
+def cbaSettings():
+    global CORSSOVER_RATE
+    global MUTATION_RATE 
+    global GENE_LENGTH
+    global POPULATION_SIZE
+    global GENERATIONS
+    CORSSOVER_RATE = 0.8
+    MUTATION_RATE = 0.05
+    GENE_LENGTH = 20
+    POPULATION_SIZE = 50
+    GENERATIONS = 1000
+
+def runGa(type):
+    global SOLUTION_FOUND
+    cbaSettings()
+    bounds(type)
+
+    print("type {}".format(type))
+    currentGeneration = 0
+    currentBest = 0
+    currentBestFit = 90000000
+    currentBestGen= 0
+    population = generate_population()
+    print("population{}\n".format(population))
     
+    while (SOLUTION_FOUND == False): 
+        fitness = selection(population,type)
+        parents = findParents(fitness)
 
+        if fitness[parents[0]] < currentBestFit:
+            currentBestFit = fitness[parents[0]]
+            currentBest = population[parents[0]]
+            currentBestGen = currentGeneration
 
+        if 0 in fitness:
+                SOLUTION_FOUND = True
+                print ("The solution is " + str(population[fitness.index(0)]) + " in " + str(currentGeneration) + " generations\n")
+        elif currentGeneration >= GENERATIONS:
+                print ("The solution was not found\n ")
+
+                print("last population {}\n Last gen best fitness {}\n \n ".format(population, fitness[ parents[0]]))
+                fitness.sort()
+                print("fitness {}\n\n".format(fitness))
+                print ("The closest solution is {} with a fitness of {} in gen {}\n".format(currentBest, currentBestFit , currentBestGen))
+                break;
+
+        next_generation = []
+        parentPos = 0;
+        while parentPos < len(population):
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
+            next_generation.append(children[0])
+            next_generation.append(children[1])
+            parentPos = parentPos + 2
+        
+        mutatedPopulation = []
+        for i in next_generation.copy():
+             mutatedPopulation.append(mutation(i))
+        population = mutatedPopulation
+        currentGeneration = currentGeneration + 1
 
 # USE THIS MAIN FUNCTION TO COMPLETE YOUR CODE - MAKE SURE IT WILL RUN FROM COMOND LINE   
 def main(): 
-    global POPULATION_SIZE 
-    global GENERATIONS
-    global SOLUTION_FOUND
-    global GENE_LENGTH
-    global UPPER_BOUND
-    global LOWER_BOUND
-    currentGeneration = 0
-   # currentBestFitness = 0
-
-    print ("mine " + str(compute_fitnessPerm([-0.21624661652620425, 3.71776235123155, -3.286788105194205, 3.309679123599082])))
-    print ("his " + str(perm([-0.21624661652620425, 3.71776235123155, -3.286788105194205, 3.309679123599082])))
-
-    population = generate_population()
-    fitness = selection(population)
-    parents = findParents(fitness)
-    avg = sum(fitness)/len(fitness)
-
-    #currentBestFitness = fitness[parents[0]]
-   # print ("first gen " + str(population) + "\n")
-   # print ("Generation {} | Generation averge fitness {} \n".format(currentGeneration,avg,))
-    print("fitness " + str(fitness) + "\n")
-   
-    while (SOLUTION_FOUND == False):  # TODO: write your termination condition here or within the loop  
-        currentGeneration = currentGeneration + 1
-        population  = next_generation(population)
-        fitness = selection(population)
-        avg = sum(fitness)/len(fitness)       
-    #    print ("Generation {} | Generation averge fitness {} \n".format(currentGeneration,avg))
-        
-       # print("fitness " + str(fitness) + "\n")
-        if 0 in fitness:
-            SOLUTION_FOUND = True
-            print ("The solution is " + str(population[fitness.index(0)]) + " in " + str(currentGeneration) + " generations")
-        elif currentGeneration < GENERATIONS and len(population) > 1:
-            currentGeneration = currentGeneration + 1
+    end = False
+    print ("Welcome to continuous distribution gentic algorithm sim! \n") 
+    print("Which problem do you want to solve?\nSum square = 1\nDixon and Price = 2\nLevy = 3\nZakharov = 4\nPerm = 5\n\nPlease input you selection below:\n")
+    while end == False:
+        inp = input()
+        if inp == "1":
+            runGa(0)
+        elif inp == "2":
+            runGa(1)
+        elif inp == "3":
+            runGa(2)
+        elif inp == "4":
+            runGa(3)
+        elif inp == "5":
+            runGa(4)
+        elif inp == "0":
+            print("Thank you for using this sim\n")
+            end =  True
         else:
-            print ("The solution was not found ")
-            bestAttempt = []
-            bestAttempt = fitness.copy()
-            bestAttempt.sort()
-            print("fitness " + str(bestAttempt) + "\n")
-            print ("The closest solution is " + str(population[parents[0]]) + " in " + str(currentGeneration) + " generations")
-            break;
-        
- 
+            print("please type a valid input \n")
 
 if __name__ == '__main__': 
     main() 

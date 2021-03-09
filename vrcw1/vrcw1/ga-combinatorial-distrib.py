@@ -15,13 +15,13 @@ import matplotlib as plt
 from numpy import random 
 
 # MINIMUM GLOBAL VARIABLES TO BE USED
-POPULATION_SIZE = 100 # Change POPULATION_SIZE to obtain better fitness.
+POPULATION_SIZE = 50 # Change POPULATION_SIZE to obtain better fitness.
 
-GENERATIONS = 50 # Change GENERATIONS to obtain better fitness.
+GENERATIONS = 500  # Change GENERATIONS to obtain better fitness.
 SOLUTION_FOUND = False
 
-CORSSOVER_RATE = 0.8 # Change CORSSOVER_RATE  to obtain better fitness.
-MUTATION_RATE = 0.5 # Change MUTATION_RATE to obtain better fitness.
+CORSSOVER_RATE = 0.9 # Change CORSSOVER_RATE  to obtain better fitness.
+MUTATION_RATE = 0.4 # Change MUTATION_RATE to obtain better fitness.
 GENE_LENGTH = 10
 VARSET = [0,1]
 
@@ -55,7 +55,7 @@ def generate_populationTrav():
 def compute_fitness(individual):
     
     fitness = sum(individual)
-    print ("current fitness {}\n".format(fitness) )
+    #print ("current fitness {}\n".format(fitness) )
     return fitness
 
 def compute_fitnessKnap(individual, weights, values, threshold):
@@ -101,6 +101,21 @@ def calcDiag(indPos, indVal, individual):
             y = y + j
 
     return fitness
+
+def compute_fitnessTrav(individual, weights):
+    
+    fitness = 0
+    currentW = 0;
+    if all(item in individual for item in VARSET) == True:
+        for i in range(0, len(individual) -1 ):
+            fitness = fitness + weights[currentW][individual[i+1]]
+            currentW = individual[i+1]
+            #print("fitness for {} to {}  {} current w is now {}\n".format(i , i + 1,weights[i][individual[i+1]],currentW ))
+    else:
+        fitness = 9999999999;
+   # print("travel length {}".format(fitness))
+    return fitness
+
 def selectionQueue(population):
 
     individual = [] 
@@ -117,6 +132,14 @@ def selectionKnap(population,weights, values, threshold):
     return individual
     
 
+def selectionTrav(population, weights):
+
+    individual = [] 
+    for i in population:
+        individual.append(compute_fitnessTrav(i, weights))
+    
+    return individual
+
 def selection(population):
 
     individual = [] 
@@ -125,28 +148,29 @@ def selection(population):
     
     return individual
 
-def crossover(first_parent, second_parent):
+def crossover(first_parent, second_parent, ubCross, lbCross):
    #implimenting single point crossover recombination
     individual = []
     crossProb = random.rand()
     if crossProb < CORSSOVER_RATE:
-        pos = random.randint(0,GENE_LENGTH-1)
+        pos = random.randint(lbCross, ubCross)
         individual.append(first_parent[:pos] +  second_parent[pos:])
-        individual.append(first_parent[pos:] +  second_parent[:pos])
+        individual.append(second_parent[:pos] + first_parent[pos:])
         return individual
     else:
         individual.append(first_parent)
         individual.append(second_parent)
         return individual
-    
     return individual
 
-def mutation(individual):
+
+
+def mutation(individual, ubCross, lbCross):
     
      #need to glabalise the mutation bounds 
     # single bit point mutation
     if random.rand() < MUTATION_RATE:
-        posRng = random.randint(0,np.size(individual) -1)
+        posRng = random.randint(lbCross,ubCross)
         newMut = random.choice(VARSET)
         while newMut == individual[posRng]:
             newMut = random.choice(VARSET)
@@ -178,28 +202,30 @@ def findParents(fitness, order):
     
 
 def knap():
+    global GENE_LENGTH 
+    GENE_LENGTH = 20
     currentBest = [];
     currentBestFitness = 0 
     curGen = 0;
-    item_number = np.arange(1,11)
-    weight = np.random.randint(1, 15, size = 10)
-    value = np.random.randint(10, 750, size = 10)
-    knapsack_threshold = 35    #Maximum weight that the bag of thief can hold 
-    print('The list is as follows:')
+    winStreak = 0
+    winThreshold = 50
+    knapsack_threshold = 35 
+    item_number = np.arange(1, GENE_LENGTH + 1)
+    weight = np.random.randint(1, 15, size =  GENE_LENGTH)
+    value = np.random.randint(10, 750, size =  GENE_LENGTH)
+    
+    print('The item avaliable:')
     print('Item No.   Weight   Value')
     for i in range(item_number.shape[0]):
         print('{0}          {1}         {2}\n'.format(item_number[i], weight[i], value[i]))
 
     population = generate_population()
     
-    print("population  " + str(population))
-   # print('complete code for a combinitorial optimization problem:')
     while (True):  
-        curGen = curGen + 1
         fitness = selectionKnap(population, weight, value, knapsack_threshold)
         parents = findParents(fitness, True)
 
-        if curGen > GENERATIONS:
+        if curGen > GENERATIONS or winStreak > winThreshold:
             print ("best fitness  {0} \n".format(currentBestFitness))
             
             print ("best values  {0} \n".format(currentBest))
@@ -211,10 +237,15 @@ def knap():
         if fitness[parents[0]] > currentBestFitness:
             currentBestFitness = fitness[parents[0]]
             currentBest = population[parents[0]]
+        else:
+            winStreak = winStreak + 1
+
+        curGen = curGen + 1
+
         next_generation = []
         parentPos = 0;
         while parentPos < len(population):
-            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]], GENE_LENGTH,0)
             if children != None:
                 next_generation.append(children[0])
                 next_generation.append(children[1])
@@ -222,51 +253,48 @@ def knap():
    
         mutatedPopulation = []
         for i in next_generation.copy():
-            mutatedPopulation.append(mutation(i))
+            mutatedPopulation.append(mutation(i,GENE_LENGTH,0))
       
         population = mutatedPopulation
-        print("Generation {0} | population  \n".format(curGen) + str(population))
 
 
 def minSum():
     curGen = 0
     global GENE_LENGTH 
     global VARSET
-    GENE_LENGTH = 4
+    GENE_LENGTH = 7
     VARSET = np.arange(0,GENE_LENGTH )
 
     population = generate_population()
-    print("population  " + str(population))
-   
+    #print("population {}\n ".format(population))
+
     while (True):  
-        curGen = curGen + 1
         fitness = selection(population)
         parents = findParents(fitness, False)
 
         if 0 in fitness:
-            print ("solution found  {} \n".format(population[fitness.index(0)]))
+            print ("solution found  {} in generation {} \n Final Population{}\n".format(population[fitness.index(0)],curGen, population))
             break;
         if curGen > GENERATIONS:
             print ("Soloution not found \n")
-            
-            print ("last Generation {}\n last fitness {}".format(population,fitness))
+            print ("last Generation {}\n\n last fitness {}".format(population,fitness))
             break;
 
+        curGen = curGen + 1
         next_generation = []
         parentPos = 0;
         while parentPos < len(population):
-            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]],GENE_LENGTH,0)
             if children != None:
                 next_generation.append(children[0])
                 next_generation.append(children[1])
             parentPos = parentPos + 2
-   
         mutatedPopulation = []
         for i in next_generation.copy():
-            mutatedPopulation.append(mutation(i))
+            mutatedPopulation.append(mutation(i,GENE_LENGTH,0))
       
         population = mutatedPopulation
-        print("Generation {0} | population  \n".format(curGen) + str(population))
+       # print("Generation {} | population  \n".format(curGen) + str(population))
 
 
 def nQueue():
@@ -278,14 +306,14 @@ def nQueue():
     population = []
     population = generate_population()
 
-    print("population  {} \n".format(population))
+   # print("population  {} \n".format(population))
    
     while (True):  
         fitness = selectionQueue(population)
         parents = findParents(fitness, False)
 
         if 0 in fitness:
-            print ("solution found  {} \n".format(population[fitness.index(0)]))
+            print ("solution found  {} in generation {} \n Final Population{}\n".format(population[fitness.index(0)],curGen, population))
             break;
         if curGen > GENERATIONS:
             print ("Soloution not found \n")
@@ -297,7 +325,7 @@ def nQueue():
         curGen = curGen + 1
         parentPos = 0;
         while parentPos < len(population):
-            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]], GENE_LENGTH,0)
             if children != None:
                 next_generation.append(children[0])
                 next_generation.append(children[1])
@@ -305,10 +333,10 @@ def nQueue():
    
         mutatedPopulation = []
         for i in next_generation.copy():
-            mutatedPopulation.append(mutation(i))
+            mutatedPopulation.append(mutation(i,GENE_LENGTH,0))
       
         population = mutatedPopulation
-        print("Generation {0} | population  \n".format(curGen) + str(population))
+        #print("Generation {0} | population  \n".format(curGen) + str(population))
        
         
 
@@ -317,23 +345,29 @@ def travel():
     global POPULATION_SIZE
     global GENE_LENGTH 
     currentBest = [];
-    currentBestFitness = 0 
+    currentBestFitness = 99999
     curGen = 0;
-    numCities = 5
-
+    numCities =3
+    winStreak = 0
+    winThreshold = 50
+    
 
     GENE_LENGTH = numCities + 1
     item_number = np.arange(0, numCities)
     VARSET = np.arange(0, numCities)
-    POPULATION_SIZE = 10
+    POPULATION_SIZE = 50
+
+
+    ubCross = GENE_LENGTH - 2
+    lbCross = 1
 
     lowerBound = 1
     upperBound = 10
-    weight = np.random.randint(lowerBound, upperBound, size =( numCities,5))  
+    weight = np.random.randint(lowerBound, upperBound, size =( numCities,GENE_LENGTH-1))  
     for i in range (0,numCities):
             weight[i][i] = 0
     
-    print('The list is as follows:')
+    print('The weight of the routes to each city :')
     print('Item No.   Weight  ')
     for i in range(item_number.shape[0]):
         print('{0}          {1}        \n'.format(item_number[i], weight[i]))
@@ -341,14 +375,12 @@ def travel():
 
     population = generate_populationTrav()
     
-    print("population  " + str(population))
-   # print('complete code for a combinitorial optimization problem:')
     while (True):  
-        curGen = curGen + 1
-        fitness = selectionKnap(population, weight, value, knapsack_threshold)
-        parents = findParents(fitness, True)
+        
+        fitness = selectionTrav(population, weight)
+        parents = findParents(fitness, False)
 
-        if curGen > GENERATIONS:
+        if curGen > GENERATIONS or winStreak > winThreshold:
             print ("best fitness  {0} \n".format(currentBestFitness))
             
             print ("best values  {0} \n".format(currentBest))
@@ -357,13 +389,18 @@ def travel():
                 print ("{}".format(currentBest[i] * (i +1)))
             break;
 
-        if fitness[parents[0]] > currentBestFitness:
+        if fitness[parents[0]] < currentBestFitness:
             currentBestFitness = fitness[parents[0]]
             currentBest = population[parents[0]]
+        else:
+            winStreak = winStreak + 1
+
+        curGen = curGen + 1
+
         next_generation = []
         parentPos = 0;
         while parentPos < len(population):
-            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]], ubCross, lbCross)
             if children != None:
                 next_generation.append(children[0])
                 next_generation.append(children[1])
@@ -371,22 +408,33 @@ def travel():
    
         mutatedPopulation = []
         for i in next_generation.copy():
-            mutatedPopulation.append(mutation(i))
+            mutatedPopulation.append(mutation(i,ubCross, lbCross))
       
         population = mutatedPopulation
-        print("Generation {0} | population  \n".format(curGen) + str(population))
+       
 
 
 # USE THIS MAIN FUNCTION TO COMPLETE YOUR CODE - MAKE SURE IT WILL RUN FROM COMOND LINE   
 def main(): 
-    global POPULATION_SIZE 
-    global GENERATIONS
-    global SOLUTION_FOUND
-    global GENE_LENGTH
-    #knap()
-    #minSum() works hundo % 
-    #nQueue()hundo % works
-    travel()
+    end = False
+    print ("Welcome to continuous distribution gentic algorithm sim! \n") 
+    print("Which problem do you want to solve?\nSum square = 1\nDixon and Price = 2\nLevy = 3\nZakharov = 4\nPerm = 5\n\nPlease input you selection below:\n")
+    while end == False:
+        inp = input()
+        if inp == "1":
+            minSum()
+        elif inp == "2":
+            knap()
+        elif inp == "3":
+            nQueue()
+        elif inp == "4":
+            travel()
+        elif inp == "0":
+            print("Thank you for using this sim\n")
+            end =  True
+        else:
+            print("please type a valid input \n")
+  
  
 
 if __name__ == '__main__': 
