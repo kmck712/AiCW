@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>e62830aa-c3a8-467a-aef4-2321dde200ad</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>ga-combinatorial-distrib.py</StartupFile>
+    <StartupFile>ga_continuous-distrib_2ndTake.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>

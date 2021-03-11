@@ -8,11 +8,9 @@ Keep you code anonymous
 """
 
 # Use standard python package only.
-import random 
 import math
 import numpy as np
 import matplotlib as plt
-import random as rng
 from numpy import random
 
 
@@ -40,6 +38,7 @@ def generate_population():
     #population = random.uniform(LOWER_BOUND, UPPER_BOUND, size=(POPULATION_SIZE, GENE_LENGTH))
     population = random.randint(LOWER_BOUND, UPPER_BOUND, size=(POPULATION_SIZE, GENE_LENGTH))
     #population = np.round(population)
+    #population = float(population)
     population = population.tolist()
   
     return population
@@ -95,20 +94,24 @@ def compute_fitnessPerm(individual):
     n = len(individual)
     b = 0.5
     fitness = 0
-    for i in range(0,n):
-        s_in = 0
-        for j in range(0,n):
-            s_in = s_in + (((j+1)**(i +1)) + b) * ((individual[j]/(j+1))**i)
-        fitness = fitness + s_in ** 2
-    return fitness
-
-def perm( x, b=.5 ):
-    x = np.asarray_chkfinite(x)
-    n = len(x)
     j = np.arange( 1., n+1 )
-    xbyj = np.fabs(x) / j
-    return sum([ sum( (j**k + b) * ((x / j) ** k - 1) ) **2
+    xbyj = np.fabs(individual) / j
+    return sum([ sum( (j**k + b) * ((individual / j) ** k - 1) ) **2
              for k in j ])
+
+def compute_fitnessAckley(individual):
+    # ValueError if any NaN or Inf
+    n = len(individual)
+    a=20 
+    b=0.2 
+    c=2*np.pi
+    sum1 = 0 
+    sum2 = 0
+    for i in range(0, n):
+        sum1 = sum1 + individual[i]**2 
+        sum2 = sum2 + np.cos( c * individual[i])
+   
+    return -a*np.exp( -b*np.sqrt( sum1 / n )) - np.exp( sum2 / n ) + a + np.exp(1)
 
 def selection(population, method):
     # need to decide on an operation more appropriete
@@ -124,16 +127,17 @@ def selection(population, method):
         individual.append(compute_fitnessZakharov(i));
        elif method == 4:
         individual.append(compute_fitnessPerm(i));
-        #individual.append(perm(i));
+       elif method == 5:
+        individual.append(compute_fitnessAckley(i));
     return individual
     
 
 def crossover(first_parent, second_parent):
     #implimenting single point crossover recombination
     individual = []
-    crossProb = rng.random() 
+    crossProb = random.random() 
     if crossProb < CORSSOVER_RATE:
-        pos = rng.randint(0,GENE_LENGTH-1)
+        pos = random.randint(0,GENE_LENGTH-1)
         individual.append(first_parent[:pos] +  second_parent[pos:])
         individual.append(first_parent[pos:] +  second_parent[:pos])
         return individual
@@ -147,14 +151,33 @@ def crossover(first_parent, second_parent):
 def mutation(individual):
     #need to glabalise the mutation bounds 
     # single bit point mutation
-    if rng.random() < MUTATION_RATE:
-        posRng = rng.randint(0,np.size(individual) -1)
+    if random.random() < MUTATION_RATE:
+        posRng = random.randint(0,np.size(individual) -1)
         newMut = random.randint(LOWER_BOUND, UPPER_BOUND)
+        #newMut = random.uniform(LOWER_BOUND, UPPER_BOUND)
         while newMut == individual[posRng]:
-            newMut = rng.randint(LOWER_BOUND, UPPER_BOUND)
+            newMut = random.randint(LOWER_BOUND, UPPER_BOUND)
         individual[posRng] = newMut
     return individual
 
+def randSelc(fitness):
+    parentsPos = []
+    testFit = fitness.copy()
+    testFit.sort()
+    testFit2 = fitness.copy()
+    testFit2.sort(reverse = True)
+    for i in range(0,len(fitness)):
+        posRng = random.uniform(0,sum(fitness));
+        rngSum = 0
+        found = False
+        cnt = 0
+        while found == False:
+            rngSum = rngSum + testFit2[cnt]
+            if rngSum >= posRng:
+                parentsPos.append(fitness.index(testFit[cnt]))
+                found = True
+            cnt = cnt + 1
+    return parentsPos
 
 def findParents(fitness):
     #selection with to find values with lowest zeros 
@@ -200,9 +223,13 @@ def bounds(type):
     if (type == 3):#Zakharov
         UPPER_BOUND = 10
         LOWER_BOUND = -5
-    if (type == 4): #perm
-        UPPER_BOUND = GENE_LENGTH
+    elif (type == 4): #perm
+        UPPER_BOUND = GENE_LENGTH + 1
         LOWER_BOUND = -GENE_LENGTH
+        
+    elif (type == 5): #ackely 
+        UPPER_BOUND = 30
+        LOWER_BOUND = -15
     else: #sum squares, levy, dixon and price
         UPPER_BOUND = 10
         LOWER_BOUND = -10
@@ -242,17 +269,20 @@ def cbaSettings():
     global GENE_LENGTH
     global POPULATION_SIZE
     global GENERATIONS
-    CORSSOVER_RATE = 0.8
-    MUTATION_RATE = 0.05
-    GENE_LENGTH = 20
-    POPULATION_SIZE = 50
-    GENERATIONS = 1000
+    CORSSOVER_RATE = 1
+    MUTATION_RATE = 0.025
+    GENE_LENGTH = 50
+    POPULATION_SIZE = 125
+    GENERATIONS = 10000
 
 def runGa(type):
     global SOLUTION_FOUND
+    global LOWER_BOUND
+    global UPPER_BOUND
+    SOLUTION_FOUND = False
+    selec = 2
     cbaSettings()
     bounds(type)
-
     print("type {}".format(type))
     currentGeneration = 0
     currentBest = 0
@@ -263,16 +293,20 @@ def runGa(type):
     
     while (SOLUTION_FOUND == False): 
         fitness = selection(population,type)
-        parents = findParents(fitness)
-
+        if selec == 1:
+            parents = findParents(fitness)
+        elif selec == 2:
+            parents = randSelc(fitness)
         if fitness[parents[0]] < currentBestFit:
             currentBestFit = fitness[parents[0]]
             currentBest = population[parents[0]]
             currentBestGen = currentGeneration
-
         if 0 in fitness:
                 SOLUTION_FOUND = True
                 print ("The solution is " + str(population[fitness.index(0)]) + " in " + str(currentGeneration) + " generations\n")
+        elif currentBestFit< 0.000000000001:
+                SOLUTION_FOUND = True
+                print ("The solution is " + str(currentBest) + " in " + str(currentGeneration) + " generations\n")
         elif currentGeneration >= GENERATIONS:
                 print ("The solution was not found\n ")
 
@@ -281,38 +315,55 @@ def runGa(type):
                 print("fitness {}\n\n".format(fitness))
                 print ("The closest solution is {} with a fitness of {} in gen {}\n".format(currentBest, currentBestFit , currentBestGen))
                 break;
-
         next_generation = []
         parentPos = 0;
-        while parentPos < len(population):
+        while parentPos < len(population) - 1:
             children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]])
             next_generation.append(children[0])
             next_generation.append(children[1])
             parentPos = parentPos + 2
-        
+    
         mutatedPopulation = []
         for i in next_generation.copy():
              mutatedPopulation.append(mutation(i))
         population = mutatedPopulation
         currentGeneration = currentGeneration + 1
+    return currentBestGen
 
 # USE THIS MAIN FUNCTION TO COMPLETE YOUR CODE - MAKE SURE IT WILL RUN FROM COMOND LINE   
 def main(): 
     end = False
     print ("Welcome to continuous distribution gentic algorithm sim! \n") 
-    print("Which problem do you want to solve?\nSum square = 1\nDixon and Price = 2\nLevy = 3\nZakharov = 4\nPerm = 5\n\nPlease input you selection below:\n")
+    print("Which problem do you want to solve?\nSum square = 1\nDixon and Price = 2\nLevy = 3\nZakharov = 4\nPerm = 5\nAckley = 6 \nExit = 0\n\nPlease input you selection below:\n")
     while end == False:
         inp = input()
         if inp == "1":
-            runGa(0)
+            result = []
+            for i in range(0,10):
+                result.append(runGa(0))
+            print("final Result {}".format(result))
         elif inp == "2":
             runGa(1)
         elif inp == "3":
-            runGa(2)
+            result = []
+            for i in range(0,10):
+                result.append(runGa(2))
+            print("final Result {}".format(result))
         elif inp == "4":
-            runGa(3)
+            result = []
+            for i in range(0,10):
+                result.append(runGa(3))
+            
+            print("final Result {}".format(result))
         elif inp == "5":
             runGa(4)
+        elif inp == "6":
+            result = []
+            for i in range(0,10):
+                result.append(runGa(5))
+            print("final Result {}".format(result))
+        elif inp == "7":
+            print("test Fitness {}".format(int(compute_fitnessAckley([0,0]))))
         elif inp == "0":
             print("Thank you for using this sim\n")
             end =  True

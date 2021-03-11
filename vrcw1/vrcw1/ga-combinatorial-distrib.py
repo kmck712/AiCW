@@ -15,9 +15,9 @@ import matplotlib as plt
 from numpy import random 
 
 # MINIMUM GLOBAL VARIABLES TO BE USED
-POPULATION_SIZE = 50 # Change POPULATION_SIZE to obtain better fitness.
+POPULATION_SIZE = 10# Change POPULATION_SIZE to obtain better fitness.
 
-GENERATIONS = 500  # Change GENERATIONS to obtain better fitness.
+GENERATIONS = 100 # Change GENERATIONS to obtain better fitness.
 SOLUTION_FOUND = False
 
 CORSSOVER_RATE = 0.9 # Change CORSSOVER_RATE  to obtain better fitness.
@@ -116,6 +116,17 @@ def compute_fitnessTrav(individual, weights):
    # print("travel length {}".format(fitness))
     return fitness
 
+
+def compute_fitnessMap(individual, neighbours):
+    
+    fitness = 0
+    for i in range(len(individual)):
+        for j in neighbours[i]:
+            if individual[j-1] == individual[i]:
+                fitness = fitness + 1
+    print("fitness {}\n".format(fitness))
+    return fitness
+
 def selectionQueue(population):
 
     individual = [] 
@@ -146,6 +157,13 @@ def selection(population):
     for i in population:
         individual.append(compute_fitness(i))
     
+    return individual
+
+def selectionMap(population, connections):
+
+    individual = [] 
+    for i in population:
+        individual.append(compute_fitnessMap(i, connections))
     return individual
 
 def crossover(first_parent, second_parent, ubCross, lbCross):
@@ -336,8 +354,48 @@ def nQueue():
             mutatedPopulation.append(mutation(i,GENE_LENGTH,0))
       
         population = mutatedPopulation
-        #print("Generation {0} | population  \n".format(curGen) + str(population))
-       
+        
+def mapColouring():
+    curGen = 0
+    global GENE_LENGTH 
+    global VARSET
+
+    GENE_LENGTH = 8
+    colours = 4
+    VARSET = np.arange(0,colours)
+    population = []
+    population = generate_population()
+
+    connections = [[2,3,4],[1,3,5],[1,2,4,5,6,7,8],[1,3,8],[2,3,6],[5,3,7],[6,3,8],[3,4,7]]
+    print("connections {}".format(population))
+    while (True):  
+        fitness = selectionMap(population, connections)
+        parents = findParents(fitness, False)
+
+        if 0 in fitness:
+            print ("solution found  {} in generation {} \n Final Population{}\n".format(population[fitness.index(0)],curGen, population))
+            break;
+        if curGen > GENERATIONS:
+            print ("Soloution not found \n")
+            
+            print ("last Generation {}\n last fitness {}".format(population,fitness))
+            break;
+
+        next_generation = []
+        curGen = curGen + 1
+        parentPos = 0;
+        while parentPos < len(population):
+            children = crossover(population[parents[parentPos]],population[parents[parentPos + 1]], GENE_LENGTH,0)
+            if children != None:
+                next_generation.append(children[0])
+                next_generation.append(children[1])
+            parentPos = parentPos + 2
+   
+        mutatedPopulation = []
+        for i in next_generation.copy():
+            mutatedPopulation.append(mutation(i,GENE_LENGTH,0))
+      
+        population = mutatedPopulation
         
 
 def travel():
@@ -429,6 +487,8 @@ def main():
             nQueue()
         elif inp == "4":
             travel()
+        elif inp == "5":
+            mapColouring()
         elif inp == "0":
             print("Thank you for using this sim\n")
             end =  True
